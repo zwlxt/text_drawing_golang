@@ -40,7 +40,11 @@ func newCanvas(w, h int) *image.RGBA {
 	rect := image.Rect(0, 0, w, h)
 	canvas := image.NewRGBA(rect)
 	for i := range canvas.Pix {
-		canvas.Pix[i] = 255
+		if i%250 == 0 {
+			canvas.Pix[i] = 0
+		} else {
+			canvas.Pix[i] = 255
+		}
 	}
 	return canvas
 }
@@ -66,6 +70,35 @@ func drawBackground(canvas draw.Image, rect image.Rectangle) {
 	draw.Draw(canvas, rect, bg, image.ZP, draw.Src)
 }
 
+func wordWrap(text string, width int, fontFace font.Face) []string {
+	lineWidth := fixed.I(0)
+	rs := []rune(text)
+	line := ""
+	lines := make([]string, 0)
+	for i := 0; i < len(rs); i++ {
+		r := rs[i]
+		_, advance, ok := fontFace.GlyphBounds(r)
+		if !ok {
+			// skipping unknown character
+			continue
+		}
+
+		if lineWidth+advance < fixed.I(width) {
+			line += string(r)
+			lineWidth += advance
+			if i == len(rs)-1 {
+				lines = append(lines, line)
+			}
+		} else {
+			lines = append(lines, line)
+			line = ""
+			lineWidth = fixed.I(0)
+			i--
+		}
+	}
+	return lines
+}
+
 func addText(canvas draw.Image, text string, x, y, width int) {
 	ff := fontFace("C:/Windows/Fonts/simsun.ttc")
 	point := fixed.Point26_6{
@@ -83,34 +116,9 @@ func addText(canvas draw.Image, text string, x, y, width int) {
 		Dot:  point,
 		Face: ff,
 	}
-	wordsPerLineList := make([]int, 0)
-	wordCount := 0
-	lineWidth := fixed.I(0)
-	rs := []rune(text)
-	for i := 0; i < len(rs); i++ {
-		_, advance, ok := ff.GlyphBounds(rs[i])
-		if !ok {
-			// skipping unknown character
-			continue
-		}
-
-		if lineWidth < fixed.I(width) {
-			wordCount++
-			lineWidth += advance
-		} else {
-			wordsPerLineList = append(wordsPerLineList, wordCount)
-			wordCount = 0
-			lineWidth = fixed.I(0)
-			i--
-		}
-	}
-	wordsPerLineList = append(wordsPerLineList, wordCount)
-
-	prevLineBreaker := 0
-	for _, wordsPerLine := range wordsPerLineList {
-		line := string([]rune(text)[prevLineBreaker : prevLineBreaker+wordsPerLine])
+	lines := wordWrap(text, width, ff)
+	for _, line := range lines {
 		drawer.DrawString(line)
-		prevLineBreaker += wordsPerLine
 		point.Y += ff.Metrics().Height
 		drawer.Dot = point
 	}
