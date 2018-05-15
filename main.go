@@ -87,6 +87,7 @@ func wordWrap(text string, width int, ff font.Face) []string {
 			line += string(r)
 			lineWidth += advance
 			if r == '\n' { // handle line breakers
+				line = line[:len(line)-1]
 				lines = append(lines, line)
 				line = ""
 				lineWidth = fixed.I(0)
