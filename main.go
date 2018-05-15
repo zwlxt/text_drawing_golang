@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"image/jpeg"
 	"io/ioutil"
 	"os"
@@ -60,7 +61,12 @@ func fontColor(r, g, b, a uint8) *color.RGBA {
 	return &color.RGBA{r, g, b, a}
 }
 
-func addText(canvas *image.RGBA, text string, x, y, width int) {
+func drawBackground(canvas draw.Image, rect image.Rectangle) {
+	bg := image.NewUniform(color.RGBA{0, 0, 0, 150})
+	draw.Draw(canvas, rect, bg, image.ZP, draw.Src)
+}
+
+func addText(canvas draw.Image, text string, x, y, width int) {
 	ff := fontFace("C:/Windows/Fonts/simsun.ttc")
 	point := fixed.Point26_6{
 		// X offset
@@ -82,17 +88,16 @@ func addText(canvas *image.RGBA, text string, x, y, width int) {
 	lineWidth := fixed.I(0)
 	rs := []rune(text)
 	for i := 0; i < len(rs); i++ {
-		bounds, advance, ok := ff.GlyphBounds(rs[i])
+		_, advance, ok := ff.GlyphBounds(rs[i])
 		if !ok {
 			// skipping unknown character
 			continue
 		}
-		// trim advance of the last letter before comparing
-		if lineWidth-advance < fixed.I(width) {
+
+		if lineWidth < fixed.I(width) {
 			wordCount++
-			lineWidth += bounds.Max.X + advance
+			lineWidth += advance
 		} else {
-			println(lineWidth, fixed.I(width))
 			wordsPerLineList = append(wordsPerLineList, wordCount)
 			wordCount = 0
 			lineWidth = fixed.I(0)
@@ -115,6 +120,6 @@ func main() {
 	canvas := newCanvas(500, 500)
 
 	text := `瓦亚格岛是印度尼西亚西巴布亚省拉贾安帕特群岛的一部分。这些无人居住的小岛很受潜水者和浮潜者的欢迎，他们渴望探索周围巨大而多样的珊瑚礁系统。瓦亚格岛是珊瑚礁三角区的一部分，虽然它只覆盖了地球上1.6%的海洋区域，但却包含了地球上所有已知的珊瑚物种的76%。`
-	addText(canvas, text, 10, 0, 500)
+	addText(canvas, text, 10, 0, 250)
 	saveImage("output.jpg", canvas)
 }
