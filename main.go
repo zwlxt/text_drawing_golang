@@ -86,7 +86,12 @@ func wordWrap(text string, width int, ff font.Face) []string {
 		if lineWidth+advance < fixed.I(width) {
 			line += string(r)
 			lineWidth += advance
-			if i == len(rs)-1 {
+			if r == '\n' { // handle line breakers
+				lines = append(lines, line)
+				line = ""
+				lineWidth = fixed.I(0)
+			}
+			if i == len(rs)-1 { // last loop
 				lines = append(lines, line)
 			}
 		} else {
@@ -127,7 +132,10 @@ func drawTextWordWrap(canvas draw.Image, lines []string, ff font.Face, x, y int)
 func main() {
 	const w, h = 500, 500
 	const leftMargin, rightMargin = 10, 10
-	const text = `瓦亚格岛是印度尼西亚西巴布亚省拉贾安帕特群岛的一部分。这些无人居住的小岛很受潜水者和浮潜者的欢迎，他们渴望探索周围巨大而多样的珊瑚礁系统。瓦亚格岛是珊瑚礁三角区的一部分，虽然它只覆盖了地球上1.6%的海洋区域，但却包含了地球上所有已知的珊瑚物种的76%。`
+	const text = `瓦亚格岛
+	
+瓦亚格岛是印度尼西亚西巴布亚省拉贾安帕特群岛的一部分。这些无人居住的小岛很受潜水者和浮潜者的欢迎，他们渴望探索周围巨大而多样的珊瑚礁系统。
+瓦亚格岛是珊瑚礁三角区的一部分，虽然它只覆盖了地球上1.6%的海洋区域，但却包含了地球上所有已知的珊瑚物种的76%。`
 	ff := fontFace("C:/Windows/Fonts/simsun.ttc", 24)
 	canvas := newCanvas(w, h)
 	lines := wordWrap(text, w/2, ff)
