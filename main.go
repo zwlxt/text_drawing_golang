@@ -49,7 +49,7 @@ func newCanvas(w, h int) *image.RGBA {
 	return canvas
 }
 
-func fontFace(filename string) font.Face {
+func fontFace(filename string, size float64) font.Face {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -58,26 +58,26 @@ func fontFace(filename string) font.Face {
 	if err != nil {
 		panic(err)
 	}
-	return truetype.NewFace(f, &truetype.Options{Size: 20})
-}
-
-func fontColor(r, g, b, a uint8) *color.RGBA {
-	return &color.RGBA{r, g, b, a}
+	return truetype.NewFace(f, &truetype.Options{Size: size})
 }
 
 func drawBackground(canvas draw.Image, rect image.Rectangle) {
-	bg := image.NewUniform(color.RGBA{0, 0, 0, 150})
-	draw.Draw(canvas, rect, bg, image.ZP, draw.Src)
+	bg := image.NewUniform(color.RGBA{0, 0, 0, 100})
+	draw.Draw(canvas, rect, bg, image.ZP, draw.Over)
 }
 
-func wordWrap(text string, width int, fontFace font.Face) []string {
+func paragraphHeight(text []string, ff font.Face) int {
+	return ff.Metrics().Ascent.Floor() + ff.Metrics().Height.Floor()*len(text)
+}
+
+func wordWrap(text string, width int, ff font.Face) []string {
 	lineWidth := fixed.I(0)
 	rs := []rune(text)
 	line := ""
 	lines := make([]string, 0)
 	for i := 0; i < len(rs); i++ {
 		r := rs[i]
-		_, advance, ok := fontFace.GlyphBounds(r)
+		advance, ok := ff.GlyphAdvance(r)
 		if !ok {
 			// skipping unknown character
 			continue
@@ -99,8 +99,8 @@ func wordWrap(text string, width int, fontFace font.Face) []string {
 	return lines
 }
 
-func addText(canvas draw.Image, text string, x, y, width int) {
-	ff := fontFace("C:/Windows/Fonts/simsun.ttc")
+func drawTextWordWrap(canvas draw.Image, lines []string, ff font.Face, x, y int) {
+
 	point := fixed.Point26_6{
 		// X offset
 		X: fixed.I(x),
@@ -110,13 +110,13 @@ func addText(canvas draw.Image, text string, x, y, width int) {
 		Y: ff.Metrics().Ascent + fixed.I(y),
 	}
 	drawer := &font.Drawer{
-		Src: image.NewUniform(fontColor(100, 100, 0, 255)),
+		Src: image.NewUniform(color.Black),
 		Dst: canvas,
 		// Note that this is the baseline location
 		Dot:  point,
 		Face: ff,
 	}
-	lines := wordWrap(text, width, ff)
+
 	for _, line := range lines {
 		drawer.DrawString(line)
 		point.Y += ff.Metrics().Height
@@ -125,9 +125,13 @@ func addText(canvas draw.Image, text string, x, y, width int) {
 }
 
 func main() {
-	canvas := newCanvas(500, 500)
-
-	text := `瓦亚格岛是印度尼西亚西巴布亚省拉贾安帕特群岛的一部分。这些无人居住的小岛很受潜水者和浮潜者的欢迎，他们渴望探索周围巨大而多样的珊瑚礁系统。瓦亚格岛是珊瑚礁三角区的一部分，虽然它只覆盖了地球上1.6%的海洋区域，但却包含了地球上所有已知的珊瑚物种的76%。`
-	addText(canvas, text, 10, 0, 250)
+	const w, h = 500, 500
+	const leftMargin, rightMargin = 10, 10
+	const text = `瓦亚格岛是印度尼西亚西巴布亚省拉贾安帕特群岛的一部分。这些无人居住的小岛很受潜水者和浮潜者的欢迎，他们渴望探索周围巨大而多样的珊瑚礁系统。瓦亚格岛是珊瑚礁三角区的一部分，虽然它只覆盖了地球上1.6%的海洋区域，但却包含了地球上所有已知的珊瑚物种的76%。`
+	ff := fontFace("C:/Windows/Fonts/simsun.ttc", 24)
+	canvas := newCanvas(w, h)
+	lines := wordWrap(text, w/2, ff)
+	drawBackground(canvas, image.Rect(leftMargin, rightMargin, w/2, paragraphHeight(lines, ff)))
+	drawTextWordWrap(canvas, lines, ff, leftMargin, rightMargin)
 	saveImage("output.jpg", canvas)
 }
