@@ -66,8 +66,9 @@ func drawBackground(canvas draw.Image, rect image.Rectangle) {
 	draw.Draw(canvas, rect, bg, image.ZP, draw.Over)
 }
 
-func paragraphHeight(text []string, ff font.Face) int {
-	return ff.Metrics().Ascent.Floor() + ff.Metrics().Height.Floor()*len(text)
+func paragraphHeight(text []string, ff font.Face, lineSpacing int) int {
+	return ff.Metrics().Ascent.Floor() +
+		(ff.Metrics().Height.Floor()+lineSpacing)*len(text) - lineSpacing
 }
 
 func wordWrap(text string, width int, ff font.Face) []string {
@@ -105,8 +106,8 @@ func wordWrap(text string, width int, ff font.Face) []string {
 	return lines
 }
 
-func drawTextWordWrap(canvas draw.Image, lines []string, ff font.Face, x, y int) {
-
+func drawTextWordWrap(canvas draw.Image, lines []string,
+	ff font.Face, lineSpacing, x, y int) {
 	point := fixed.Point26_6{
 		// X offset
 		X: fixed.I(x),
@@ -126,12 +127,14 @@ func drawTextWordWrap(canvas draw.Image, lines []string, ff font.Face, x, y int)
 	for _, line := range lines {
 		drawer.DrawString(line)
 		point.Y += ff.Metrics().Height
+		point.Y += fixed.I(lineSpacing)
 		drawer.Dot = point
 	}
 }
 
 func main() {
 	const w, h = 500, 500
+	const spacing = 2
 	const leftMargin, rightMargin = 10, 10
 	const text = `瓦亚格岛
 	
@@ -140,7 +143,9 @@ func main() {
 	ff := fontFace("C:/Windows/Fonts/simsun.ttc", 24)
 	canvas := newCanvas(w, h)
 	lines := wordWrap(text, w/2, ff)
-	drawBackground(canvas, image.Rect(leftMargin, rightMargin, w/2, paragraphHeight(lines, ff)))
-	drawTextWordWrap(canvas, lines, ff, leftMargin, rightMargin)
+	drawBackground(canvas, image.Rect(leftMargin, rightMargin, w/2,
+		paragraphHeight(lines, ff, spacing)))
+	drawTextWordWrap(canvas, lines, ff, spacing, leftMargin, rightMargin)
+
 	saveImage("output.jpg", canvas)
 }
